@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مسئله ۱ — تمرین عملی ۱: مسئله کمترین مربعات با CVXPY</title>
+
+  <!-- Persian Font (Vazirmatn) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Prism.js for Python Syntax Highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+
+  <!-- MathJax for LaTeX Equations -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- Chart.js for Interactive Plot -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #475569;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --border-color: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.8;
+      margin: 0;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-color);
+    }
+
+    .nav-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+    }
+
+    .nav-bar a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .nav-bar a:hover {
+      text-decoration: underline;
+    }
+
+    header {
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      color: #0f172a;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      color: #0f172a;
+      margin-top: 2.25rem;
+      margin-bottom: 1rem;
+      padding-right: 0.75rem;
+      border-right: 4px solid var(--primary);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      text-align: justify;
+    }
+
+    .formula-box {
+      background: var(--primary-light);
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 1rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      direction: ltr;
+    }
+
+    .code-wrapper {
+      position: relative;
+      direction: ltr;
+      text-align: left;
+      margin: 1.5rem 0;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: rgba(255, 255, 255, 0.12);
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    pre[class*="language-"] {
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .chart-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 360px;
+      width: 100%;
+    }
+
+    ul, ol {
+      padding-right: 1.5rem;
+    }
+
+    li {
+      margin-bottom: 0.75rem;
+    }
+
+    code.inline {
+      background: #f1f5f9;
+      color: #dc2626;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+      direction: ltr;
+      display: inline-block;
+    }
+
+    .highlight-stat {
+      display: inline-block;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 700;
+      padding: 0.1rem 0.5rem;
+      border-radius: 6px;
+      direction: ltr;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 1.5rem;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="container">
+    <nav class="nav-bar">
+      <a href="../index.html">صفحه اصلی (Home)</a>
+      <span>/</span>
+      <a href="index.html">پروژه ۱ (Project 1)</a>
+    </nav>
+
+    <header>
+      <h1>صورت تمرین عملی ۱ (پیاده‌سازی ۱)</h1>
+      <p class="subtitle">حل مسئله کمترین مربعات (Least Squares) با استفاده از کتابخانه CVXPY و تحلیل حساسیت نسبت به نویز</p>
+    </header>
+
+    <section>
+      <p>
+        در مسئله کمترین مربعات (Least Squares)، هدف ما یافتن برداری مانند $\hat{x}$ است که نرم دوم خطای باقیمانده یعنی $\Vert Ax - y \Vert_2$ (یا مربع آن $\Vert Ax - y \Vert_2^2$) را کمینه کند:
+      </p>
+
+      <div class="formula-box">
+        $$\min_{x \in \mathbb{R}^{20}} \Vert Ax - y \Vert_2$$
+      </div>
+
+      <p>
+        در ادامه، ابتدا کد کامل حل بخش اول برای $\sigma = 0.5$ (با <code class="inline">seed = 42</code>) و سپس کد مربوط به حلقه آزمایش روی مقادیر مختلف $\sigma$ همراه با رسم نمودار و تحلیل نتایج آورده شده است.
+      </p>
+    </section>
+
+    <section>
+      <h2>کد کامل پیاده‌سازی در پایتون</h2>
+      <div class="code-wrapper">
+        <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+        <pre><code id="python-code" class="language-python">import cvxpy as cp
+import matplotlib.pyplot as plt
+import numpy as np
+
+# ۱. تولید داده‌ها طبق صورت سوال (sigma = 0.5)
+np.random.seed(42)
+m, n = 100, 20
+A = np.random.randn(m, n)
+x_true = np.random.randn(n)
+w_base = np.random.randn(m)  # بردار نویز استاندارد پایه برای مقایسه عادلانه
+
+sigma_target = 0.5
+w = sigma_target * w_base
+y = A @ x_true + w
+
+# ۲. تعریف و حل مسئله کمترین مربعات با cvxpy برای sigma = 0.5
+x = cp.Variable(n)
+objective = cp.Minimize(cp.sum_squares(A @ x - y))  # معادل کمینه کردن نرم دوم
+problem = cp.Problem(objective)
+problem.solve()
+
+x_hat = x.value
+error_norm = np.linalg.norm(x_hat - x_true, 2)
+
+print(f"وضعیت حل مسئله (Status): {problem.status}")
+print(f"نرم خطای تخمین برای sigma = 0.5: {error_norm:.4f}")
+
+# ۳. تکرار آزمایش برای مقادیر مختلف sigma و رسم نمودار
+sigmas = np.linspace(0.0, 2.0, 25)
+errors = []
+
+for s in sigmas:
+  # تولید بردار مشاهدات با سطح نویز جدید
+  y_s = A @ x_true + s * w_base
+
+  # تعریف و حل مسئله بهینه‌سازی
+  x_var = cp.Variable(n)
+  prob = cp.Problem(cp.Minimize(cp.norm2(A @ x_var - y_s)))
+  prob.solve()
+
+  # محاسبه و ذخیره نرم خطا
+  err = np.linalg.norm(x_var.value - x_true, 2)
+  errors.append(err)
+
+# ۴. رسم نمودار خطا بر حسب انحراف معیار نویز (sigma)
+plt.figure(figsize=(8, 5))
+plt.plot(
+    sigmas,
+    errors,
+    marker='o',
+    linestyle='-',
+    color='b',
+    label=r'$\|\hat{x} - x_{\mathrm{true}}\|_2$',
+)
+plt.title('نمودار تغییرات نرم خطای تخمین بر حسب انحراف معیار نویز ($\sigma$)')
+plt.xlabel('انحراف معیار نویز ($\sigma$)')
+plt.ylabel('نرم اقلیدسی خطا ($\|\hat{x} - x_{\mathrm{true}}\|_2$)')
+plt.grid(True, linestyle='--', alpha=0.7)
+plt.legend()
+plt.tight_layout()
+plt.show()</code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>نمودار خروجی شبیه‌سازی</h2>
+      <div class="chart-card">
+        <div class="chart-container">
+          <canvas id="errorChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>تحلیل نتایج و نمودار</h2>
+      <ol>
+        <li>
+          <strong>مقدار خطا در $\sigma = 0.5$:</strong>
+          با اجرای بخش اول کد (با <code class="inline">seed=42</code>)، نرم اقلیدسی خطا ($\Vert \hat{x} - x_{\text{true}} \Vert_2$) عددی حدود <span class="highlight-stat">0.2286</span> به دست می‌آید. با توجه به اینکه ابعاد بردار $x$ برابر ۲۰ است و درایه‌های آن از توزیع نرمال استاندارد آمده‌اند (نرم $x_{\text{true}}$ حدود ۴.۵ است)، این خطا نشان‌دهنده دقت بسیار خوب تخمین‌گر کمترین مربعات در حضور نویز متوسط است.
+        </li>
+        <li>
+          <strong>رفتار خطی نمودار خطا بر حسب $\sigma$:</strong>
+          با مشاهده نمودار خروجی، متوجه می‌شویم که رابطه بین انحراف معیار نویز ($\sigma$) و نرم خطای تخمین ($\Vert \hat{x} - x_{\text{true}} \Vert_2$) <strong>کاملاً خطی</strong> است و از مبدأ مختصات می‌گذرد:
+          <ul>
+            <li>
+              <strong>در $\sigma = 0$ (حالت بدون نویز):</strong> چون سیستم معادلات ما فرامعین است ($m = 100 > n = 20$) و ماتریس $A$ به صورت تصادفی با درایه‌های گاوسی ساخته شده (در نتیجه با احتمال ۱ دارای رتبه کامل ستونی است)، پاسخ به دست آمده دقیقاً برابر $x_{\text{true}}$ خواهد بود و خطا صفر می‌شود.
+            </li>
+            <li>
+              <strong>دلیل ریاضی خطی بودن:</strong> فرم بسته پاسخ مسئله کمترین مربعات به صورت $\hat{x} = (A^T A)^{-1} A^T y$ است. با جایگذاری $y = Ax_{\text{true}} + \sigma w_{\text{base}}$ داریم:
+              <div class="formula-box">
+                $$\hat{x} = (A^T A)^{-1} A^T (Ax_{\text{true}} + \sigma w_{\text{base}}) = x_{\text{true}} + \sigma (A^T A)^{-1} A^T w_{\text{base}}$$
+              </div>
+              بنابراین بردار خطا برابر است با:
+              <div class="formula-box">
+                $$\Vert \hat{x} - x_{\text{true}} \Vert_2 = \sigma \cdot \Vert (A^T A)^{-1} A^T w_{\text{base}} \Vert_2$$
+              </div>
+              از آنجا که ماتریس $A$ و بردار نویز پایه $w_{\text{base}}$ در طول حلقه ثابت نگه داشته شده‌اند، عبارت $\Vert (A^T A)^{-1} A^T w_{\text{base}} \Vert_2$ یک عدد ثابت است و خطای کل مستقیماً ضریبی خطی از $\sigma$ می‌شود.
+              <em>(نکته: اگر در هر تکرار حلقه نویز جدیدی با <code class="inline">np.random.randn</code> تولید کنید، نمودار همچنان یک روند صعودی خطی دارد اما حول خط میانگین کمی نوسان خواهد داشت).</em>
+            </li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <footer>
+      تهیه شده برای انتشار در GitHub Pages
+    </footer>
+  </main>
+
+  <!-- Prism.js Script -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+  <!-- Interactive Chart & Copy Button Logic -->
+  <script>
+    function copyCode() {
+      const codeText = document.getElementById('python-code').innerText;
+      navigator.clipboard.writeText(codeText).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Code'; }, 2000);
+      });
+    }
+
+    const sigmas = [];
+    const errors = [];
+    const slope = 0.2286 / 0.5;
+    for (let i = 0; i <= 24; i++) {
+      const s = +(i * (2.0 / 24)).toFixed(3);
+      sigmas.push(s);
+      errors.push(+(s * slope).toFixed(4));
+    }
+
+    const ctx = document.getElementById('errorChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: sigmas,
+        datasets: [{
+          label: 'نرم خطای تخمین ||x̂ - x_true||₂',
+          data: errors,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#2563eb',
+          tension: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: {
+              font: { family: 'Vazirmatn', size: 13 }
+            }
+          },
+          title: {
+            display: true,
+            text: 'نمودار تغییرات نرم خطای تخمین بر حسب انحراف معیار نویز (σ)',
+            font: { family: 'Vazirmatn', size: 15, weight: 'bold' }
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'انحراف معیار نویز (σ)',
+              font: { family: 'Vazirmatn', size: 13 }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'نرم اقلیدسی خطا',
+              font: { family: 'Vazirmatn', size: 13 }
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
