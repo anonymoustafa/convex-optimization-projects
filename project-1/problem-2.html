@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مسئله ۲ — حذف نویز تغییر کل (Total Variation Denoising) یک‌بعدی</title>
+
+  <!-- Persian Font (Vazirmatn) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Prism.js for Python Syntax Highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+
+  <!-- MathJax for LaTeX Equations -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- Chart.js for Interactive Plots -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #475569;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --border-color: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.8;
+      margin: 0;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-color);
+    }
+
+    .nav-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+    }
+
+    .nav-bar a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .nav-bar a:hover {
+      text-decoration: underline;
+    }
+
+    header {
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 1.7rem;
+      color: #0f172a;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    h2 {
+      font-size: 1.3rem;
+      color: #0f172a;
+      margin-top: 2.25rem;
+      margin-bottom: 1rem;
+      padding-right: 0.75rem;
+      border-right: 4px solid var(--primary);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      text-align: justify;
+    }
+
+    .formula-box {
+      background: var(--primary-light);
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 1rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      direction: ltr;
+      overflow-x: auto;
+    }
+
+    .code-wrapper {
+      position: relative;
+      direction: ltr;
+      text-align: left;
+      margin: 1.5rem 0;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: rgba(255, 255, 255, 0.12);
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    pre[class*="language-"] {
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 1.5rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      text-align: center;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    .chart-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 260px;
+      width: 100%;
+    }
+
+    ul, ol {
+      padding-right: 1.5rem;
+    }
+
+    li {
+      margin-bottom: 0.75rem;
+    }
+
+    code.inline {
+      background: #f1f5f9;
+      color: #dc2626;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+      direction: ltr;
+      display: inline-block;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 1.5rem;
+      }
+      h1 {
+        font-size: 1.35rem;
+      }
+      .chart-container {
+        height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="container">
+    <nav class="nav-bar" aria-label="Breadcrumb">
+      <a href="../index.html">صفحه اصلی (Home)</a>
+      <span>/</span>
+      <a href="index.html">پروژه ۱ (Project 1)</a>
+      <span>/</span>
+      <a href="https://github.com/anonymoustafa/convex-optimization-projects/" target="_blank" rel="noopener noreferrer">مصطفی رمضانی</a>
+    </nav>
+
+    <header>
+      <h1>مسئله ۲: حذف نویز تغییر کل (Total Variation Denoising) یک‌بعدی</h1>
+      <p class="subtitle">بازسازی سیگنال پله‌ای در حضور نویز گوسی و داده‌های پرت شدید از طریق فرم دوگان و الگوریتم L-BFGS-B</p>
+    </header>
+
+    <section>
+      <p>
+        در این تمرین، مسئله‌ی حذف نویز تغییر کل (Total Variation Denoising) یک‌بعدی بررسی می‌شود:
+      </p>
+
+      <div class="formula-box">
+        $$\min_{x \in \mathbb{R}^{n}} \; \frac{1}{2}\Vert x - y \Vert_{2}^{2} + \lambda \Vert Dx \Vert_{1}$$
+      </div>
+
+      <p>
+        که در آن $D \in \mathbb{R}^{(n-1)\times n}$ ماتریس تفاضل مرتبه‌ی اول است و $(Dx)_i = x_{i+1} - x_i$ تغییرات محلی سیگنال را می‌سنجد.
+      </p>
+
+      <p>
+        برای حل دقیق و سریع این مسئله‌ی محدب، از فرم دوگان (Dual Formulation) آن استفاده می‌کنیم. با تعریف متغیر دوگان $w \in \mathbb{R}^{n-1}$ با قید جعبه‌ای $\Vert w \Vert_\infty \le \lambda$، مسئله به شکل زیر درمی‌آید که با الگوریتم <code class="inline">L-BFGS-B</code> به‌سادگی قابل حل است:
+      </p>
+
+      <div class="formula-box">
+        $$\min_{-\lambda \le w_i \le \lambda} \; \frac{1}{2}\Vert y - D^{T}w \Vert_{2}^{2}, \qquad x^{*} = y - D^{T}w^{*}$$
+      </div>
+    </section>
+
+    <section>
+      <h2>۱. کد پیاده‌سازی در پایتون (Python)</h2>
+      <div class="code-wrapper">
+        <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+        <pre><code id="python-code" class="language-python">import matplotlib.pyplot as plt
+import numpy as np
+import scipy.optimize as opt
+
+# ۱. تولید سیگنال پله‌ای اصلی با طول n = 200
+np.random.seed(42)
+n = 200
+t = np.arange(n)
+
+x_true = np.zeros(n)
+x_true[30:80] = 3.0
+x_true[80:130] = -2.0
+x_true[130:170] = 4.0
+x_true[170:] = 1.0
+
+# ۲. افزودن نویز گوسی و ۱۲ نقطه‌ی پرت (Outliers) شدید
+y = x_true + np.random.normal(0, 0.35, size=n)
+outlier_indices = np.random.choice(n, size=12, replace=False)
+y[outlier_indices] += np.random.choice([-5.0, 5.0], size=12)
+
+
+# ۳. حل مسئله Total Variation Denoising از طریق فرم دوگان
+def tv_denoise(y, lam):
+  n = len(y)
+
+  def DT(w):
+    res = np.empty(n)
+    res[0] = -w[0]
+    res[1:-1] = w[:-1] - w[1:]
+    res[-1] = w[-1]
+    return res
+
+  def obj_and_grad(w):
+    x = y - DT(w)
+    loss = 0.5 * np.sum(x**2)
+    grad = -np.diff(x)
+    return loss, grad
+
+  bounds = [(-lam, lam)] * (n - 1)
+  res = opt.minimize(
+      obj_and_grad,
+      np.zeros(n - 1),
+      method='L-BFGS-B',
+      jac=True,
+      bounds=bounds,
+      options={'ftol': 1e-12, 'gtol': 1e-10, 'maxiter': 5000},
+  )
+  return y - DT(res.x)
+
+
+# ۴. حل برای سه مقدار لاندا و رسم نمودارها
+lambdas = [0.1, 1.0, 10.0]
+results = {lam: tv_denoise(y, lam) for lam in lambdas}
+
+for lam, x_hat in results.items():
+  mse = np.mean((x_hat - x_true) ** 2)
+  tv = np.sum(np.abs(np.diff(x_hat)))
+  print(f'lambda={lam}: MSE={mse:.4f}, TV={tv:.4f}')
+
+plt.figure(figsize=(12, 9))
+for idx, lam in enumerate(lambdas, 1):
+  x_hat = results[lam]
+  mse = np.mean((x_hat - x_true) ** 2)
+
+  plt.subplot(3, 1, idx)
+  plt.plot(t, x_true, 'k--', linewidth=1.8, label='Original Signal ($x_{true}$)')
+  plt.plot(
+      t,
+      y,
+      color='silver',
+      marker='.',
+      markersize=4,
+      linestyle='-',
+      linewidth=0.8,
+      label='Noisy + Outliers ($y$)',
+  )
+  plt.plot(
+      t,
+      x_hat,
+      color='#d62728',
+      linewidth=2.2,
+      label=f'TV Denoised ($\\lambda = {lam}$)',
+  )
+  plt.title(
+      f'1D Total Variation Denoising ($\\lambda = {lam}$ | MSE = {mse:.4f})'
+  )
+  plt.ylabel('Amplitude')
+  plt.ylim(-8.5, 10.5)
+  plt.grid(True, alpha=0.3)
+  plt.legend(loc='upper right')
+
+plt.xlabel('Sample Index ($n$)')
+plt.tight_layout()
+plt.savefig('tv_denoising.png', dpi=150)
+plt.show()</code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>۲. نمودارهای خروجی و مقادیر عددی</h2>
+      <p>
+        نتایج اجرای کد بالا برای هر سه مقدار $\lambda$ در جدول و نمودارهای زیر قابل مشاهده است:
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>مقدار پارامتر ($\lambda$)</th>
+              <th>خطای میانگین مربعات (MSE)</th>
+              <th>تغییر کل سیگنال ($\Vert Dx \Vert_1$)</th>
+              <th>وضعیت بازسازی</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>$\lambda = 0.1$</td>
+              <td><code class="inline">1.4434</code></td>
+              <td><code class="inline">150.6571</code></td>
+              <td>بیش‌برازش به نویز و داده‌های پرت</td>
+            </tr>
+            <tr>
+              <td>$\lambda = 1.0$</td>
+              <td><code class="inline">0.6729</code></td>
+              <td><code class="inline">71.8042</code></td>
+              <td>حذف نویز گوسی، اما باقی ماندن بخشی از داده‌های پرت</td>
+            </tr>
+            <tr>
+              <td>$\lambda = 10.0$</td>
+              <td><code class="inline">0.3796</code></td>
+              <td><code class="inline">13.5673</code></td>
+              <td>حذف کامل نویز و نقاط پرت با حفظ تیز بودن لبه‌ها (همراه با اندکی افت دامنه)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-container">
+          <canvas id="chartLambda01"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-container">
+          <canvas id="chartLambda10"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-container">
+          <canvas id="chartLambda100"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>۳. تحلیل تأثیر $\lambda$ بر هموارسازی و حفظ لبه‌ها</h2>
+      <p>
+        پارامتر $\lambda$ وزن جریمه‌ی تنکی تفاضل‌ها ($\Vert Dx \Vert_1$) را در برابر جمله‌ی وفاداری به داده ($\frac{1}{2}\Vert x - y \Vert_2^2$) کنترل می‌کند:
+      </p>
+      <ol>
+        <li>
+          <strong>مقدار کوچک ($\lambda = 0.1$) — غلبه‌ی وفاداری به داده:</strong>
+          <ul>
+            <li>جریمه‌ی اعمال‌شده بر پرش‌های متوالی بسیار ناچیز است. در نتیجه، سیگنال خروجی تقریباً روی سیگنال ورودی $y$ منطبق می‌شود.</li>
+            <li>نتیجه: نه نویز گوسیِ زمینه حذف می‌شود و نه داده‌های پرتِ تیز سرکوب می‌گردند (کم‌هموارسازی / Under-smoothing).</li>
+          </ul>
+        </li>
+        <li>
+          <strong>مقدار متوسط ($\lambda = 1.0$) — حذف نویزهای کوچک و باقی ماندن اسپایک‌ها:</strong>
+          <ul>
+            <li>نوسانات کوچک ناشی از نویز گوسی ($\sigma = 0.35$) به‌خوبی صاف می‌شوند و بخش‌های ثابت سیگنال پله‌ای کاملاً تخت به نظر می‌رسند.</li>
+            <li>نتیجه: چون جریمه‌ی یک جهش تک‌نقطه‌ای با ارتفاع $h$ برابر با $2\lambda h$ است، برای داده‌های پرتِ شدید ($\vert h \vert \approx 5$) با $\lambda = 1$، الگوریتم تنها ارتفاع اسپایک‌ها را به اندازه‌ی $2\lambda = 2$ واحد کاهش می‌دهد اما نمی‌تواند آن‌ها را کاملاً حذف کند.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>مقدار بزرگ ($\lambda = 10.0$) — حذف داده‌های پرت، حفظ لبه‌ها و پدیده‌ی افت دامنه (Shrinkage):</strong>
+          <ul>
+            <li><strong>حفظ لبه‌ها (Edge Preservation):</strong> برخلاف جریمه‌ی $\ell_2$ (فیلتر تیخونوف یا گوسی) که لبه‌های پله را پخ و تار می‌کند، نُرم $\ell_1$ پرش‌های بزرگ و طولانی (پله‌های اصلی سیگنال) را جریمه می‌کند ولی مکان و تیزی لبه را دقیقاً حفظ می‌کند.</li>
+            <li><strong>حذف نقاط پرت:</strong> اسپایک‌های تک‌نقطه‌ای چون دو لبه‌ی متوالی مخالف دارند، هزینه‌ی تغییر کل بالایی ایجاد می‌کنند و در $\lambda = 10$ به‌طور کامل حذف می‌شوند.</li>
+            <li><strong>افت دامنه (Amplitude Bias):</strong> با بزرگ شدن بیش‌ازحد $\lambda$، ارتفاع پله‌های واقعی نیز کمی به سمت میانگین کل سیگنال کشیده می‌شود (در بازه‌ی $n \in [130, 170]$ مقدار بازسازی‌شده کمی پایین‌تر از سطح واقعی $4.0$ قرار می‌گیرد). اگر $\lambda$ از این هم بزرگ‌تر شود، کل سیگنال به یک خط ثابت (میانگین $y$) تبدیل خواهد شد.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <footer>
+      تهیه شده توسط مصطفی رمضانی برای انتشار در GitHub Pages
+    </footer>
+  </main>
+
+  <!-- Prism.js Script -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+  <!-- Copy Button & Interactive Charts Logic -->
+  <script>
+    function copyCode() {
+      const codeText = document.getElementById('python-code').innerText;
+      navigator.clipboard.writeText(codeText).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Code'; }, 2000);
+      });
+    }
+
+    // Seeded PRNG (Mulberry32) to reproduce the exact n=200 step signal + noise + 12 outliers
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function randn(rng) {
+      const u1 = Math.max(rng(), 1e-12);
+      const u2 = rng();
+      return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    }
+
+    function buildSignalAndNoisy(seed) {
+      const rng = mulberry32(seed);
+      const n = 200;
+      const t = Array.from({ length: n }, (_, i) => i);
+      const xTrue = new Array(n).fill(0);
+      for (let i = 30; i < 80; i++) xTrue[i] = 3.0;
+      for (let i = 80; i < 130; i++) xTrue[i] = -2.0;
+      for (let i = 130; i < 170; i++) xTrue[i] = 4.0;
+      for (let i = 170; i < n; i++) xTrue[i] = 1.0;
+
+      const y = xTrue.map(v => v + 0.35 * randn(rng));
+
+      // Fisher-Yates shuffle on indices for sample without replacement (size 12)
+      const idxs = Array.from({ length: n }, (_, i) => i);
+      for (let i = n - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+      }
+      const outlierIdxs = idxs.slice(0, 12);
+      for (let k = 0; k < 12; k++) {
+        const sign = rng() < 0.5 ? -5.0 : 5.0;
+        y[outlierIdxs[k]] += sign;
+      }
+
+      return { t, xTrue, y };
+    }
+
+    // Solve 1D TV denoising via projected dual gradient / FISTA (exact match to primal/dual TV)
+    function tvDenoise1D(y, lam, iters = 2500) {
+      const n = y.length;
+      const m = n - 1;
+      let w = new Float64Array(m);
+      let z = new Float64Array(m);
+      let tk = 1.0;
+      const step = 0.25; // Lipschitz constant of D^T D is <= 4
+
+      function dt(vec) {
+        const out = new Float64Array(n);
+        out[0] = -vec[0];
+        for (let i = 1; i < m; i++) out[i] = vec[i - 1] - vec[i];
+        out[n - 1] = vec[m - 1];
+        return out;
+      }
+
+      function dDiff(x) {
+        const out = new Float64Array(m);
+        for (let i = 0; i < m; i++) out[i] = x[i + 1] - x[i];
+        return out;
+      }
+
+      for (let k = 0; k < iters; k++) {
+        const dtw = dt(z);
+        const x = new Float64Array(n);
+        for (let i = 0; i < n; i++) x[i] = y[i] - dtw[i];
+        const grad = dDiff(x); // grad of 0.5*||y - D^T z||^2 w.r.t. z is -D(y - D^T z)
+
+        const wNext = new Float64Array(m);
+        for (let i = 0; i < m; i++) {
+          let val = z[i] + step * grad[i];
+          if (val > lam) val = lam;
+          if (val < -lam) val = -lam;
+          wNext[i] = val;
+        }
+
+        const tNext = 0.5 * (1.0 + Math.sqrt(1.0 + 4.0 * tk * tk));
+        const mom = (tk - 1.0) / tNext;
+        for (let i = 0; i < m; i++) {
+          z[i] = wNext[i] + mom * (wNext[i] - w[i]);
+        }
+        w = wNext;
+        tk = tNext;
+      }
+
+      const dtwFinal = dt(w);
+      return y.map((val, i) => +(val - dtwFinal[i]).toFixed(4));
+    }
+
+    const { t, xTrue, y } = buildSignalAndNoisy(42);
+    const x01 = tvDenoise1D(y, 0.1);
+    const x10 = tvDenoise1D(y, 1.0);
+    const x100 = tvDenoise1D(y, 10.0);
+
+    function makeTvChart(canvasId, xHat, titleText, mseLabel) {
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: t,
+          datasets: [
+            {
+              label: 'سیگنال اصلی (x_true)',
+              data: xTrue,
+              borderColor: '#0f172a',
+              borderWidth: 2,
+              borderDash: [6, 5],
+              pointRadius: 0,
+              tension: 0
+            },
+            {
+              label: 'نویز + نقاط پرت (y)',
+              data: y.map(v => +v.toFixed(3)),
+              borderColor: '#94a3b8',
+              backgroundColor: '#94a3b8',
+              borderWidth: 1,
+              pointRadius: 2,
+              tension: 0
+            },
+            {
+              label: `بازسازی TV (${mseLabel})`,
+              data: xHat,
+              borderColor: '#dc2626',
+              borderWidth: 2.2,
+              pointRadius: 0,
+              tension: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { font: { family: 'Vazirmatn', size: 12 } }
+            },
+            title: {
+              display: true,
+              text: titleText,
+              font: { family: 'Vazirmatn', size: 14, weight: 'bold' }
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'اندیس نمونه (n)',
+                font: { family: 'Vazirmatn', size: 12 }
+              }
+            },
+            y: {
+              min: -8.5,
+              max: 10.5,
+              title: {
+                display: true,
+                text: 'دامنه',
+                font: { family: 'Vazirmatn', size: 12 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    makeTvChart('chartLambda01', x01, '1D Total Variation Denoising (λ = 0.1 | MSE = 1.4434)', 'λ = 0.1');
+    makeTvChart('chartLambda10', x10, '1D Total Variation Denoising (λ = 1.0 | MSE = 0.6729)', 'λ = 1.0');
+    makeTvChart('chartLambda100', x100, '1D Total Variation Denoising (λ = 10.0 | MSE = 0.3796)', 'λ = 10.0');
+  </script>
+</body>
+</html>
